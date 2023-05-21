@@ -27,7 +27,7 @@ async function run() {
     const toyCollection = client.db("toyUniverse").collection("toyInfo");
 
     app.get("/toys", async (req, res) => {
-      const toys = toyCollection.find().limit(20);
+      const toys = toyCollection.find().limit(200);
       const result = await toys.toArray();
       res.send(result);
     });
@@ -42,7 +42,7 @@ async function run() {
       console.log(req.query.email);
       let query = {};
       if (req.query?.email) {
-        query = { seller_email: req.query.email };
+        query = { sellerEmail: req.query.email };
       }
       const result = await toyCollection.find(query).toArray();
       res.send(result);
@@ -51,7 +51,7 @@ async function run() {
     app.get("/tabs", async (req, res) => {
       let query = {};
       if (req.query?.sub_category) {
-        query = { sub_category: req.query.sub_category };
+        query = { subCategory: req.query.sub_category };
       }
       const result = await toyCollection.find(query).toArray();
       res.send(result);
@@ -64,7 +64,7 @@ async function run() {
       }
       let query = {};
       if (req.query?.email) {
-        query = { seller_email: req.query.email };
+        query = { sellerEmail: req.query.email };
       }
 
       const asc_des = sort_type.sort_by === "ascending" ? 1 : -1;
@@ -76,7 +76,7 @@ async function run() {
     app.get("/search", async (req, res) => {
       const searchQuery = req.query?.query;
       const result = await toyCollection
-        .find({ name: { $regex: searchQuery, $options: "i" } })
+        .find({ productName: { $regex: searchQuery, $options: "i" } })
         .toArray();
       res.send(result);
     });
@@ -98,7 +98,38 @@ async function run() {
       res.send(result);
     });
 
-   
+    app.put("/update/:id", async (req, res) => {
+      const id = req.params.id;
+      console.log(id);
+      const data = req.body;
+      const result = await toyCollection.updateOne(
+        { _id: new ObjectId(id) },
+        {
+          $set: {
+            photo_url: data.photo_url,
+            name: data.name,
+            seller_name: data.seller_name,
+            seller_email: data.seller_email,
+            sub_category: data.sub_category,
+            price: data.price,
+            rating: data.rating,
+            quantity: data.quantity,
+            description: data.description,
+          },
+        },
+        {
+          upsert: true,
+        }
+      );
+      res.send(result);
+    });
+
+    app.delete("/delete/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await toyCollection.deleteOne({ _id: new ObjectId(id) });
+      res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     client.db("admin").command({ ping: 1 });
     console.log(
