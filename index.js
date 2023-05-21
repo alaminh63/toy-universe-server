@@ -7,7 +7,7 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.pdzlhd7.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -22,21 +22,85 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    client.connect();
 
     const toyCollection = client.db("toyUniverse").collection("toyInfo");
-    app.get("/toyInfo", async (req, res) => {
-      const cursor = toyCollection.find();
-      const result = await cursor.toArray();
+
+    app.get("/toys", async (req, res) => {
+      const toys = toyCollection.find().limit(20);
+      const result = await toys.toArray();
       res.send(result);
     });
 
-    app.post("/addToy", async (req, res) => {
-      const toyInfo = req.body;
+    app.get("/toy/:id", async (req, res) => {
+      const id = req.params.id;
+      const toy = await toyCollection.findOne({ _id: new ObjectId(id) });
+      res.send(toy);
     });
 
+    app.get("/seller", async (req, res) => {
+      console.log(req.query.email);
+      let query = {};
+      if (req.query?.email) {
+        query = { seller_email: req.query.email };
+      }
+      const result = await toyCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.get("/tabs", async (req, res) => {
+      let query = {};
+      if (req.query?.sub_category) {
+        query = { sub_category: req.query.sub_category };
+      }
+      const result = await toyCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.get("/sort", async (req, res) => {
+      let sort_type = {};
+      if (req.query?.sortby) {
+        sort_type = { sort_by: req.query.sortby };
+      }
+      let query = {};
+      if (req.query?.email) {
+        query = { seller_email: req.query.email };
+      }
+
+      const asc_des = sort_type.sort_by === "ascending" ? 1 : -1;
+      const toys = toyCollection.find(query, { sort: { price: asc_des } });
+      const result = await toys.toArray();
+      res.send(result);
+    });
+
+    app.get("/search", async (req, res) => {
+      const searchQuery = req.query?.query;
+      const result = await toyCollection
+        .find({ name: { $regex: searchQuery, $options: "i" } })
+        .toArray();
+      res.send(result);
+    });
+
+    app.post("/add-toy", async (req, res) => {
+      const data = req.body;
+      const toy = {
+        productImage: data.productImage,
+        productName: data.productName,
+        sellerName: data.sellerName,
+        sellerEmail: data.sellerEmail,
+        subCategory: data.subCategory,
+        price: data.price,
+        rating: data.rating,
+        availableQuantity: data.availableQuantity,
+        description: data.description,
+      };
+      const result = await toyCollection.insertOne(toy);
+      res.send(result);
+    });
+
+   
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
