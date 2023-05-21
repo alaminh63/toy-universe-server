@@ -27,7 +27,12 @@ async function run() {
     const toyCollection = client.db("toyUniverse").collection("toyInfo");
 
     app.get("/toys", async (req, res) => {
-      const toys = toyCollection.find().limit(200);
+      const toys = toyCollection.find().limit(20);
+      const result = await toys.toArray();
+      res.send(result);
+    });
+    app.get("/toys2", async (req, res) => {
+      const toys = toyCollection.find().limit(6);
       const result = await toys.toArray();
       res.send(result);
     });
